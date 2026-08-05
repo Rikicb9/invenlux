@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Invenlux",
+    "slug": "invenlux",
+    "version": "0.1.0",
+    "scheme": "invenlux",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#E9EEEC",
+    "locales": { "es": "./es.json" },
+    "plugins": ["expo-router", "expo-font", "expo-sqlite"],
+    "ios": { "supportsTablet": true, "bundleIdentifier": "app.invenlux.movil" },
+    "android": {
+      "package": "app.invenlux.movil",
+      "adaptiveIcon": { "backgroundColor": "#0F1F1B" }
+    },
+    "experiments": { "typedRoutes": true }
+  }
+}
