@@ -8,6 +8,16 @@ export type Orden = 'Caducidad' | 'Categoría' | 'Nombre';
 
 export const ORDENES: readonly Orden[] = ['Caducidad', 'Categoría', 'Nombre'];
 
+/**
+ * "Despensa" y "Congelados" son a la vez categoría y ubicación. Como la
+ * ubicación ya se filtra arriba, se ocultan aquí para no ofrecer dos fichas
+ * que parecen lo mismo. Los productos de esas categorías siguen apareciendo:
+ * simplemente se filtran por dónde están guardados, no por su categoría.
+ */
+const CATEGORIAS_FILTRABLES = CATEGORIAS.filter(
+  (c) => c !== 'Despensa' && c !== 'Congelados',
+);
+
 export interface Filtros {
   ubicacion: FiltroUbicacion;
   categoria: FiltroCategoria;
@@ -91,7 +101,7 @@ export function PanelFiltros({
         <div className="filtros-detalle">
           {grupo(
             'Categoría',
-            ['Todas', ...CATEGORIAS] as FiltroCategoria[],
+            ['Todas', ...CATEGORIAS_FILTRABLES] as FiltroCategoria[],
             filtros.categoria,
             (categoria) => onCambio({ ...filtros, categoria }),
           )}
