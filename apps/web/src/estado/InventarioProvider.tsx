@@ -15,7 +15,7 @@ import {
   type Producto,
   type ProductoUrgente,
 } from '@invenlux/core';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   borrarItemCompra,
   borrarProducto,
@@ -76,7 +76,7 @@ interface Contexto {
   registrarConsumo: (productoId: string, cantidad: number) => Promise<ResultadoConsumo>;
   actualizarProducto: (p: Producto) => Promise<void>;
   eliminarProducto: (productoId: string) => Promise<void>;
-  añadirALista: (texto: string) => Promise<void>;
+  añadirALista: (texto: string, productoId?: string | null) => Promise<void>;
   añadirVariosALista: (items: Array<{ texto: string; productoId: string | null }>) => Promise<number>;
   alternarComprado: (item: ItemCompra) => Promise<void>;
   quitarDeLista: (id: string) => Promise<void>;
@@ -104,7 +104,14 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
     return e;
   }, []);
 
+  const iniciado = useRef(false);
+
   useEffect(() => {
+    // StrictMode ejecuta los efectos dos veces en desarrollo: sin esto, las
+    // dos pasadas verían la despensa vacía y la sembrarían por duplicado.
+    if (iniciado.current) return;
+    iniciado.current = true;
+
     (async () => {
       try {
         await iniciarSesion();
@@ -114,7 +121,12 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
           await recargar();
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'No se ha podido conectar con Supabase.');
+        console.error('Fallo al conectar con Supabase:', err);
+        const detalle =
+          (err as { message?: string })?.message ??
+          (err as { error_description?: string })?.error_description ??
+          '';
+        setError(detalle || 'No se ha podido conectar con Supabase.');
       } finally {
         setCargando(false);
       }
@@ -246,20 +258,26 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   // HU-07 · lista de la compra manual
-  const añadirALista = useCallback(async (texto: string) => {
-    const limpio = texto.trim();
-    if (!limpio) return;
-    const item: ItemCompra = {
-      id: nuevoId(),
-      hogarId: hogarActual(),
-      texto: limpio,
-      productoId: null,
-      origen: 'manual',
-      comprado: false,
-    };
-    await guardarItemCompra(item);
-    setLista((prev) => [...prev, item]);
-  }, []);
+  const añadirALista = useCallback(
+    async (texto: string, productoId: string | null = null) => {
+      const limpio = texto.trim();
+      if (!limpio) return;
+      // Si ese producto ya está pendiente, no se duplica.
+      if (productoId && lista.some((i) => i.productoId === productoId && !i.comprado)) return;
+
+      const item: ItemCompra = {
+        id: nuevoId(),
+        hogarId: hogarActual(),
+        texto: limpio,
+        productoId,
+        origen: 'manual',
+        comprado: false,
+      };
+      await guardarItemCompra(item);
+      setLista((prev) => [...prev, item]);
+    },
+    [lista],
+  );
 
   const añadirVariosALista = useCallback(
     async (items: Array<{ texto: string; productoId: string | null }>) => {

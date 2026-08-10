@@ -1,22 +1,59 @@
-import { textoOrigen } from '@invenlux/core';
-import { useState } from 'react';
+import {
+  CATALOGO,
+  opcionesDeProducto,
+  textoOrigen,
+  type ItemCompra,
+  type OpcionProducto,
+} from '@invenlux/core';
+import { useMemo } from 'react';
+import { BuscadorProducto } from '../componentes/BuscadorProducto';
 import { Vacio } from '../componentes/Hoja';
 import { useInventario } from '../estado/InventarioProvider';
 
-/** HU-07 + HU-08 · lista de la compra, manual y automática. */
+/**
+ * HU-07 + HU-08 · lista de la compra.
+ *
+ * Se apunta con el mismo buscador que el alta de inventario: reconoce lo que
+ * ya tienes y el catálogo común, y si escribes algo que no existe crea la
+ * ficha del producto. Así lo que se apunta queda siempre vinculado a un
+ * producto, y al marcarlo comprado se puede dar de alta su lote directamente.
+ */
 export function Compra({ onReponer }: { onReponer: (productoId: string) => void }) {
-  const { lista, añadirALista, alternarComprado, quitarDeLista } = useInventario();
-  const [texto, setTexto] = useState('');
+  const { productos, movimientos, lista, añadirALista, alternarComprado, quitarDeLista, crearProducto } =
+    useInventario();
+
+  const opciones = useMemo(() => opcionesDeProducto(productos, movimientos), [productos, movimientos]);
 
   const pendientes = lista.filter((i) => !i.comprado);
   const enCarro = lista.filter((i) => i.comprado);
 
-  const añadir = async () => {
-    await añadirALista(texto);
-    setTexto('');
+  const elegir = async (o: OpcionProducto) => {
+    if (o.clave.startsWith('p:')) {
+      await añadirALista(o.nombre, o.clave.slice(2));
+      return;
+    }
+    // Del catálogo: se crea la ficha para que quede vinculada, aún sin stock.
+    const cat = CATALOGO[Number(o.clave.slice(2))];
+    const producto = await crearProducto({
+      nombre: cat.nombre,
+      categoria: cat.categoria,
+      unidad: cat.unidad,
+      stockMin: 1,
+    });
+    await añadirALista(producto.nombre, producto.id);
   };
 
-  const fila = (i: (typeof lista)[number]) => (
+  const crear = async (nombre: string) => {
+    const producto = await crearProducto({
+      nombre,
+      categoria: 'Otros',
+      unidad: 'unidades',
+      stockMin: 1,
+    });
+    await añadirALista(producto.nombre, producto.id);
+  };
+
+  const fila = (i: ItemCompra) => (
     <div className={`buy ${i.comprado ? 'done' : ''}`} key={i.id}>
       <button
         className="check"
@@ -44,18 +81,14 @@ export function Compra({ onReponer }: { onReponer: (productoId: string) => void 
 
   return (
     <>
-      <div className="add-row">
-        <input
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && añadir()}
-          placeholder="Añadir a la lista…"
-          autoComplete="off"
-        />
-        <button className="btn btn-primary" onClick={añadir}>
-          Añadir
-        </button>
-      </div>
+      <BuscadorProducto
+        opciones={opciones}
+        onElegir={elegir}
+        onCrear={crear}
+        etiqueta="Añadir a la lista"
+        marcador="Busca o escribe un producto"
+        limpiarAlElegir
+      />
 
       {pendientes.length ? (
         pendientes.map(fila)
@@ -65,18 +98,7 @@ export function Compra({ onReponer }: { onReponer: (productoId: string) => void 
 
       {enCarro.length > 0 && (
         <>
-          <h3
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 9.5,
-              letterSpacing: '.09em',
-              textTransform: 'uppercase',
-              color: 'var(--ink-faint)',
-              margin: '20px 0 9px',
-            }}
-          >
-            En el carro
-          </h3>
+          <h3 className="titulo-seccion">En el carro</h3>
           {enCarro.map(fila)}
         </>
       )}
