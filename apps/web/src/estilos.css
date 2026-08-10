@@ -22,7 +22,7 @@
   --shadow:0 1px 2px rgba(15,31,27,.06), 0 8px 24px rgba(15,31,27,.06);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0;overflow-x:hidden}
 body{
   background:var(--bg);
   font-family:'Inter Tight',system-ui,sans-serif;
@@ -40,6 +40,9 @@ input,select{font-family:inherit;font-size:15px}
   width:100%;max-width:430px;background:var(--bg);
   min-height:100vh;display:flex;flex-direction:column;position:relative;
   border-left:1px solid var(--line);border-right:1px solid var(--line);
+  /* Sin esto, un hijo ancho (la fila de filtros) estira toda la app y el
+     móvil aleja el zoom para que quepa. */
+  min-width:0;overflow-x:hidden;
 }
 header{
   padding:20px 18px 12px;background:var(--bg);
@@ -63,7 +66,7 @@ header.scrolled{border-bottom-color:var(--line)}
 }
 .view-sub{font-size:12.5px;color:var(--ink-soft);margin:0}
 
-main{flex:1;padding:0 18px 108px;overflow-y:auto}
+main{flex:1;min-width:0;padding:0 18px 108px;overflow-y:auto}
 
 /* ---------- Horizonte de caducidad (signature) ---------- */
 .horizon{
@@ -100,7 +103,7 @@ main{flex:1;padding:0 18px 108px;overflow-y:auto}
 .horizon-legend b{width:7px;height:7px;border-radius:50%}
 
 /* ---------- Filtros ---------- */
-.filters{display:flex;gap:6px;margin:16px 0 10px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.filters{display:flex;gap:6px;margin:16px 0 10px;max-width:100%;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .filters::-webkit-scrollbar{display:none}
 .chip{
   flex:0 0 auto;padding:6.5px 12px;border-radius:20px;background:var(--surface);
@@ -139,7 +142,8 @@ main{flex:1;padding:0 18px 108px;overflow-y:auto}
 }
 .card:active{transform:scale(.985)}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.p-name{font-weight:600;font-size:15px;letter-spacing:-.01em;margin:0 0 3px}
+.card-top>div{min-width:0}
+.p-name{font-weight:600;font-size:15px;letter-spacing:-.01em;margin:0 0 3px;overflow-wrap:anywhere}
 .p-meta{font-size:11.5px;color:var(--ink-soft);margin:0}
 .p-qty{
   font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;
