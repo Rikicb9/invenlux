@@ -15,8 +15,8 @@ import { useInventario } from '../../src/estado/InventarioProvider';
 import { Aviso, Badge, Tarjeta, Ubicacion, Vacio } from '../../src/ui/componentes';
 import { HorizonteCaducidad } from '../../src/ui/HorizonteCaducidad';
 import { Pantalla } from '../../src/ui/Pantalla';
-import { HojaEntrada, HojaNuevoProducto } from '../../src/ui/hojasAlta';
-import { HojaConsumo, HojaDetalle } from '../../src/ui/hojasProducto';
+import { HojaEntrada } from '../../src/ui/hojasAlta';
+import { HojaConsumo, HojaDetalle, HojaQuitar } from '../../src/ui/hojasProducto';
 import { color, espacio, fuente } from '../../src/ui/tema';
 
 type Filtro = 'Todo' | (typeof UBICACIONES)[number];
@@ -24,8 +24,9 @@ type Filtro = 'Todo' | (typeof UBICACIONES)[number];
 export default function Inventario() {
   const { productos, lotes, movimientos, ajustes, stockDe, cargando } = useInventario();
   const [filtro, setFiltro] = useState<Filtro>('Todo');
-  const [nuevo, setNuevo] = useState(false);
+  const [entrada, setEntrada] = useState(false);
   const [entradaDe, setEntradaDe] = useState<string | null>(null);
+  const [quitarDe, setQuitarDe] = useState<string | null>(null);
   const [detalleDe, setDetalleDe] = useState<string | null>(null);
   const [consumoDe, setConsumoDe] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -90,24 +91,23 @@ export default function Inventario() {
               numLotes={suyos.length}
               diasAviso={ajustes.diasAviso}
               onPress={() => setDetalleDe(producto.id)}
+              onQuitar={() => setQuitarDe(producto.id)}
             />
           ))
         )}
       </Pantalla>
 
-      <Pressable style={est.fab} onPress={() => setNuevo(true)} accessibilityLabel="Añadir producto">
+      <Pressable style={est.fab} onPress={() => setEntrada(true)} accessibilityLabel="Nueva entrada">
         <Text style={est.fabTexto}>+</Text>
       </Pressable>
 
-      <HojaNuevoProducto
-        visible={nuevo}
-        onCerrar={() => setNuevo(false)}
-        onCreado={(id) => {
-          setNuevo(false);
-          setEntradaDe(id);
-        }}
+      <HojaEntrada visible={entrada} onCerrar={() => setEntrada(false)} />
+      <HojaEntrada
+        visible={!!entradaDe}
+        productoId={entradaDe}
+        onCerrar={() => setEntradaDe(null)}
       />
-      <HojaEntrada productoId={entradaDe} onCerrar={() => setEntradaDe(null)} />
+      <HojaQuitar productoId={quitarDe} onCerrar={() => setQuitarDe(null)} onAviso={setAviso} />
       <HojaDetalle
         productoId={detalleDe}
         onCerrar={() => setDetalleDe(null)}
@@ -134,6 +134,7 @@ function TarjetaProducto({
   numLotes,
   diasAviso,
   onPress,
+  onQuitar,
 }: {
   producto: Producto;
   stock: number;
@@ -142,11 +143,12 @@ function TarjetaProducto({
   numLotes: number;
   diasAviso: number;
   onPress: () => void;
+  onQuitar: () => void;
 }) {
   const e = estadoCaducidad(caducidad, diasAviso);
   return (
-    <Pressable onPress={onPress} accessibilityRole="button">
-      <Tarjeta>
+    <Tarjeta>
+      <Pressable onPress={onPress} accessibilityRole="button">
         <View style={est.filaSuperior}>
           <View style={{ flex: 1 }}>
             <Text style={est.nombre}>{producto.nombre}</Text>
@@ -160,14 +162,24 @@ function TarjetaProducto({
             <Text style={est.unidad}> {abreviarUnidad(producto.unidad)}</Text>
           </Text>
         </View>
-        <View style={est.pie}>
+      </Pressable>
+      <View style={est.pie}>
+        <View style={est.etiquetas}>
           <Badge clave={e.clave} texto={etiquetaEstado(e)} />
           {ubicaciones.map((u) => (
             <Ubicacion key={u} nombre={u} />
           ))}
         </View>
-      </Tarjeta>
-    </Pressable>
+        <Pressable
+          onPress={onQuitar}
+          hitSlop={8}
+          accessibilityLabel={`Quitar ${producto.nombre} del inventario`}
+          style={({ pressed }) => [est.quitar, pressed && est.quitarActivo]}
+        >
+          <Text style={est.quitarTexto}>×</Text>
+        </Pressable>
+      </View>
+    </Tarjeta>
   );
 }
 
@@ -187,7 +199,20 @@ const est = StyleSheet.create({
   meta: { fontFamily: fuente.texto, fontSize: 11.5, color: color.tintaSuave, marginTop: 3 },
   cantidad: { fontFamily: fuente.monoFuerte, fontSize: 16, color: color.tinta },
   unidad: { fontFamily: fuente.textoMedio, fontSize: 10.5, color: color.tintaSuave },
-  pie: { flexDirection: 'row', gap: 5, marginTop: 9, flexWrap: 'wrap' },
+  pie: { flexDirection: 'row', gap: 8, marginTop: 9, alignItems: 'center', justifyContent: 'space-between' },
+  etiquetas: { flexDirection: 'row', gap: 5, flexWrap: 'wrap', flex: 1 },
+  quitar: {
+    width: 27,
+    height: 27,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.superficie2,
+    borderWidth: 1,
+    borderColor: color.linea,
+  },
+  quitarActivo: { backgroundColor: color.urgenteSuave, borderColor: color.urgenteSuave },
+  quitarTexto: { fontSize: 17, lineHeight: 20, color: color.tintaTenue, fontFamily: fuente.texto },
   fab: {
     position: 'absolute',
     right: espacio.l,

@@ -211,7 +211,8 @@ const est = StyleSheet.create({
   cantidad: { fontFamily: fuente.monoFuerte, fontSize: 14, color: color.tinta },
   siguiente: { backgroundColor: color.tinta, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
   siguienteTexto: { fontFamily: fuente.monoFuerte, fontSize: 8.5, color: '#fff', letterSpacing: 0.7 },
-  tenue: { fontFamily: fuente.texto, fontSize: 11.5, color: color.tintaSuave },
+  tenue: { fontFamily: fuente.texto, fontSize: 12, color: color.tintaSuave, lineHeight: 17 },
+  fuerte: { fontFamily: fuente.textoFuerte, color: color.tinta },
   filaMov: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -222,3 +223,70 @@ const est = StyleSheet.create({
   movTexto: { fontFamily: fuente.texto, fontSize: 12.5, color: color.tinta },
   movFecha: { fontFamily: fuente.mono, fontSize: 11.5, color: color.tintaSuave },
 });
+
+/**
+ * Quitar del inventario: dos salidas que no son lo mismo.
+ * "Se acabó" es un consumo real (descuenta por FEFO, deja histórico y entra
+ * en la compra). "Eliminar" borra la ficha entera: es para errores.
+ */
+export function HojaQuitar({
+  productoId,
+  onCerrar,
+  onAviso,
+}: {
+  productoId: string | null;
+  onCerrar: () => void;
+  onAviso: (texto: string) => void;
+}) {
+  const { productos, stockDe, registrarConsumo, eliminarProducto } = useInventario();
+  const producto = productos.find((p) => p.id === productoId);
+  if (!producto) return <Hoja visible={false} onCerrar={onCerrar} titulo="" children={null} />;
+
+  const stock = stockDe(producto.id);
+
+  const acabar = async () => {
+    onCerrar();
+    if (stock > 0) {
+      const r = await registrarConsumo(producto.id, stock);
+      onAviso(mensajeConsumo(producto.nombre, r.servido, producto.unidad, r));
+    } else {
+      onAviso(`${producto.nombre} ya estaba a cero.`);
+    }
+  };
+
+  const eliminar = async () => {
+    onCerrar();
+    await eliminarProducto(producto.id);
+    onAviso(`${producto.nombre} eliminado del inventario.`);
+  };
+
+  return (
+    <Hoja
+      visible
+      onCerrar={onCerrar}
+      titulo={producto.nombre}
+      entradilla={`Quedan ${formatearCantidad(stock, producto.unidad)} · ${producto.categoria}`}
+    >
+      <View style={est.bloque}>
+        <Etiqueta>¿Qué ha pasado?</Etiqueta>
+        <Text style={est.tenue}>
+          <Text style={est.fuerte}>Se acabó</Text> — lo has consumido. Se descuenta todo el stock por
+          FEFO, queda en el histórico y el producto entra en la lista de la compra.
+        </Text>
+        <Text style={[est.tenue, { marginTop: 9 }]}>
+          <Text style={est.fuerte}>Eliminar producto</Text> — lo creaste por error o ya no lo compras.
+          Se borra la ficha, sus lotes y su histórico. No se puede deshacer.
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Boton variante="suave" style={{ flex: 1 }} onPress={eliminar}>
+          Eliminar producto
+        </Boton>
+        <Boton variante="peligro" style={{ flex: 1 }} onPress={acabar}>
+          Se acabó
+        </Boton>
+      </View>
+    </Hoja>
+  );
+}

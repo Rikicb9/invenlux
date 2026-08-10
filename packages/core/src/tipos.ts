@@ -77,7 +77,7 @@ export interface Movimiento {
   usuarioId?: string | null;
 }
 
-export type OrigenItemCompra = 'manual' | 'agotado' | 'stock-minimo';
+export type OrigenItemCompra = 'manual' | 'agotado' | 'stock-minimo' | 'menu';
 
 export interface ItemCompra {
   id: string;

@@ -164,6 +164,17 @@ export async function borrarItemCompra(id: string): Promise<void> {
   await bd.runAsync('DELETE FROM lista_compra WHERE id = ?', [id]);
 }
 
+/** Borrado duro de un producto y todo su rastro. */
+export async function borrarProducto(productoId: string): Promise<void> {
+  const bd = await abrirBD();
+  await bd.withTransactionAsync(async () => {
+    await bd.runAsync('DELETE FROM movimiento WHERE producto_id = ?', [productoId]);
+    await bd.runAsync('DELETE FROM lote WHERE producto_id = ?', [productoId]);
+    await bd.runAsync('DELETE FROM lista_compra WHERE producto_id = ?', [productoId]);
+    await bd.runAsync('DELETE FROM producto WHERE id = ?', [productoId]);
+  });
+}
+
 export async function guardarAjustes(a: AjustesHogar): Promise<void> {
   const bd = await abrirBD();
   await bd.runAsync('UPDATE hogar SET dias_aviso = ?, estrategia = ? WHERE id = ?', [

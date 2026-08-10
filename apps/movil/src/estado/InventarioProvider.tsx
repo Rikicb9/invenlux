@@ -20,6 +20,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import {
   HOGAR_LOCAL,
   borrarItemCompra,
+  borrarProducto,
   guardarAjustes,
   guardarItemCompra,
   guardarLote,
@@ -49,6 +50,8 @@ export interface NuevaEntrada {
   fCompra: string;
   fCaducidad: string | null;
   ubicacion: Lote['ubicacion'];
+  /** Si esta compra viene en otro formato, la unidad de la ficha se actualiza. */
+  unidad?: Producto['unidad'];
 }
 
 export interface ResultadoConsumo {
@@ -72,7 +75,9 @@ interface Contexto {
   registrarEntrada: (e: NuevaEntrada) => Promise<void>;
   registrarConsumo: (productoId: string, cantidad: number) => Promise<ResultadoConsumo>;
   actualizarProducto: (p: Producto) => Promise<void>;
+  eliminarProducto: (productoId: string) => Promise<void>;
   añadirALista: (texto: string) => Promise<void>;
+  añadirVariosALista: (items: Array<{ texto: string; productoId: string | null }>) => Promise<number>;
   alternarComprado: (item: ItemCompra) => Promise<void>;
   quitarDeLista: (id: string) => Promise<void>;
   cambiarAjustes: (a: AjustesHogar) => Promise<void>;
@@ -162,6 +167,11 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
 
       const producto = productos.find((p) => p.id === datos.productoId);
       if (producto) {
+        if (datos.unidad && datos.unidad !== producto.unidad) {
+          const actualizado = { ...producto, unidad: datos.unidad };
+          await guardarProducto(actualizado);
+          setProductos((prev) => prev.map((p) => (p.id === producto.id ? actualizado : p)));
+        }
         const baja = decidirBaja(producto, stockDeProducto(producto.id, movs), lista);
         if (baja) {
           await borrarItemCompra(baja.id);
@@ -242,6 +252,48 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
     setLista((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
+  /**
+   * Borrado duro: el producto se creó por error o ya no se compra. Se lleva
+   * por delante sus lotes y su histórico, así que no es lo mismo que
+   * "se acabó", que sí es un consumo y deja rastro.
+   */
+  const eliminarProducto = useCallback(async (productoId: string) => {
+    await borrarProducto(productoId);
+    setLotes((prev) => prev.filter((l) => l.productoId !== productoId));
+    setMovimientos((prev) => prev.filter((m) => m.productoId !== productoId));
+    setLista((prev) => prev.filter((i) => i.productoId !== productoId));
+    setProductos((prev) => prev.filter((p) => p.id !== productoId));
+  }, []);
+
+  const añadirVariosALista = useCallback(
+    async (items: Array<{ texto: string; productoId: string | null }>) => {
+      const nuevos: ItemCompra[] = [];
+      const pendientes = new Set(
+        lista.filter((i) => !i.comprado).map((i) => i.productoId ?? i.texto.toLowerCase()),
+      );
+
+      for (const it of items) {
+        const clave = it.productoId ?? it.texto.toLowerCase();
+        if (pendientes.has(clave)) continue;
+        pendientes.add(clave);
+        const item: ItemCompra = {
+          id: nuevoId(),
+          hogarId: HOGAR_LOCAL,
+          texto: it.texto,
+          productoId: it.productoId,
+          origen: 'menu',
+          comprado: false,
+        };
+        await guardarItemCompra(item);
+        nuevos.push(item);
+      }
+
+      if (nuevos.length) setLista((prev) => [...prev, ...nuevos]);
+      return nuevos.length;
+    },
+    [lista],
+  );
+
   const cambiarAjustes = useCallback(async (a: AjustesHogar) => {
     await guardarAjustes(a);
     setAjustes(a);
@@ -260,7 +312,9 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
     registrarEntrada,
     registrarConsumo,
     actualizarProducto,
+    eliminarProducto,
     añadirALista,
+    añadirVariosALista,
     alternarComprado,
     quitarDeLista,
     cambiarAjustes,

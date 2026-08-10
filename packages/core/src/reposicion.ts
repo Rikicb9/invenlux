@@ -56,5 +56,7 @@ export function textoOrigen(origen: OrigenItemCompra): string {
       return 'Se acabó en casa';
     case 'stock-minimo':
       return 'Por debajo del mínimo';
+    case 'menu':
+      return 'Falta para el menú';
   }
 }

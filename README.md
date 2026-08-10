@@ -11,7 +11,7 @@ Este repositorio implementa el **Sprint 1 — bloque _Must have_** de `MVP_Inven
 ```bash
 pnpm install
 
-pnpm test          # tests del motor de dominio (27 casos)
+pnpm test          # tests del motor de dominio (54 casos)
 pnpm typecheck     # tipos de core + app
 pnpm movil         # levanta Expo (Expo Go, simulador iOS o emulador Android)
 ```
@@ -39,6 +39,9 @@ Sin UI y sin base de datos, para poder testearlo entero y reutilizarlo después 
 | `caducidad.ts` | Estados de caducidad y ranking de urgencias |
 | `reposicion.ts` | Cuándo un producto entra y sale de la lista de la compra |
 | `formato.ts` | Cantidades y fechas en castellano |
+| `texto.ts` | Comparación de nombres: evita duplicados por errata y alimenta el buscador |
+| `catalogo.ts` | 138 productos básicos de supermercado con vida útil típica |
+| `menu.ts` | Planificador semanal: recetas, cruce con la despensa y equilibrio |
 
 Tres decisiones que sostienen todo lo demás:
 
@@ -64,16 +67,19 @@ Toda escritura pasa por el provider: primero SQLite, después memoria. La app no
 
 | Historia | Dónde vive |
 |---|---|
-| HU-01 · Alta de producto | `hojasAlta.tsx` → `crearProducto` |
-| HU-02 · Alta de lote con caducidad y ubicación | `hojasAlta.tsx` → `registrarEntrada` |
+| HU-01 + HU-02 · Alta unificada de producto y lote | `hojasAlta.tsx` → `HojaEntrada` |
 | HU-03 · Ver inventario y detalle por lotes | `app/(tabs)/index.tsx`, `hojasProducto.tsx` |
 | HU-04 · Registro de consumo con mínima fricción | `HojaConsumo` (pasos rápidos + «se acabó») |
 | HU-05 · Descuento FEFO | `core/fefo.ts` |
-| HU-06 · Alertas de caducidad | `core/caducidad.ts`, `app/(tabs)/caduca.tsx` |
+| HU-06 · Alertas de caducidad | `core/caducidad.ts`, horizonte en Inventario |
 | HU-07 · Lista de la compra manual y automática | `core/reposicion.ts`, `app/(tabs)/compra.tsx` |
 | HU-08 · Lista dinámica al terminarse un producto | `registrarConsumo` → `decidirAlta` |
 
-Fuera de alcance en este sprint, por decisión del MVP: escaneo de código de barras, OCR de tickets, importación por email, recetas, voz y multiusuario.
+Fuera de alcance en este sprint, por decisión del MVP: escaneo de código de barras, OCR de tickets, importación por email, voz y multiusuario.
+
+**Adelanto del Sprint 3 — menú semanal.** La pestaña Menú funciona con un banco local de 22 recetas y las reglas que después aplicará el asistente de IA: priorizar lo que caduca, equilibrar bases (sin repetir dos días seguidos, carne limitada al 40% de la semana) y respetar lo que pide el usuario. La lectura de la petición es hoy por palabras clave, no comprensión real: la pantalla lo indica.
+
+**El catálogo es la base del OCR.** Los 138 productos con vida útil típica y el mapa categoría→ubicación (`UBICACION_SUGERIDA`) son exactamente lo que necesitará el escaneo de tickets para decidir dónde va cada producto y qué caducidad estimarle.
 
 ---
 

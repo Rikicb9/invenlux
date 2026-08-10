@@ -5,7 +5,7 @@ import { useInventario } from '../../src/estado/InventarioProvider';
 import { color, fuente } from '../../src/ui/tema';
 
 export default function Pestañas() {
-  const { urgentes, lista } = useInventario();
+  const { lista } = useInventario();
   const pendientes = lista.filter((i) => !i.comprado).length;
 
   return (
@@ -27,11 +27,10 @@ export default function Pestañas() {
         }}
       />
       <Tabs.Screen
-        name="caduca"
+        name="menu"
         options={{
-          title: 'Caduca',
-          tabBarBadge: urgentes.length || undefined,
-          tabBarIcon: ({ color: c, size }: { color: string; size: number }) => <Feather name="clock" color={c} size={size} />,
+          title: 'Menú',
+          tabBarIcon: ({ color: c, size }: { color: string; size: number }) => <Feather name="calendar" color={c} size={size} />,
         }}
       />
       <Tabs.Screen
