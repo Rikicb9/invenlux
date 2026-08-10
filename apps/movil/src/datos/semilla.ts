@@ -1,5 +1,6 @@
 import { hoyISO, sumarDias, type Categoria, type Ubicacion, type Unidad } from '@invenlux/core';
-import { HOGAR_LOCAL, guardarLote, guardarMovimientos, guardarProducto, nuevoId } from './repositorio';
+import { guardarLote, guardarMovimientos, guardarProducto, nuevoId } from './repositorio';
+import { hogarActual } from './sesion';
 
 /**
  * Despensa de ejemplo — la misma del prototipo validado, para poder abrir la
@@ -29,7 +30,7 @@ export async function sembrarDespensa(): Promise<void> {
     const productoId = nuevoId();
     await guardarProducto({
       id: productoId,
-      hogarId: HOGAR_LOCAL,
+      hogarId: hogarActual(),
       nombre,
       categoria,
       unidad,

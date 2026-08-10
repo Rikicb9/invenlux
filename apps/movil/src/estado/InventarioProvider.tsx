@@ -18,7 +18,6 @@ import {
 } from '@invenlux/core';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
-  HOGAR_LOCAL,
   borrarItemCompra,
   borrarProducto,
   guardarAjustes,
@@ -30,6 +29,7 @@ import {
   nuevoId,
 } from '../datos/repositorio';
 import { sembrarDespensa } from '../datos/semilla';
+import { hogarActual, iniciarSesion } from '../datos/sesion';
 
 /**
  * Toda la escritura pasa por aquí: primero SQLite, después el estado en
@@ -64,6 +64,8 @@ export interface ResultadoConsumo {
 
 interface Contexto {
   cargando: boolean;
+  /** Mensaje de error de conexión, si lo hay. */
+  error: string | null;
   ajustes: AjustesHogar;
   productos: Producto[];
   lotes: Lote[];
@@ -87,6 +89,7 @@ const Ctx = createContext<Contexto | null>(null);
 
 export function InventarioProvider({ children }: { children: React.ReactNode }) {
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [ajustes, setAjustes] = useState<AjustesHogar>({ diasAviso: 3, estrategia: 'FEFO' });
   const [productos, setProductos] = useState<Producto[]>([]);
   const [lotes, setLotes] = useState<Lote[]>([]);
@@ -105,12 +108,18 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     (async () => {
-      const e = await recargar();
-      if (e.productos.length === 0) {
-        await sembrarDespensa();
-        await recargar();
+      try {
+        await iniciarSesion();
+        const e = await recargar();
+        if (e.productos.length === 0) {
+          await sembrarDespensa();
+          await recargar();
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'No se ha podido conectar con Supabase.');
+      } finally {
+        setCargando(false);
       }
-      setCargando(false);
     })();
   }, [recargar]);
 
@@ -126,7 +135,7 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
 
   // HU-01 · alta de producto
   const crearProducto = useCallback(async (datos: NuevoProducto) => {
-    const producto: Producto = { id: nuevoId(), hogarId: HOGAR_LOCAL, autoCompra: true, ...datos };
+    const producto: Producto = { id: nuevoId(), hogarId: hogarActual(), autoCompra: true, ...datos };
     await guardarProducto(producto);
     setProductos((prev) => [...prev, producto].sort((a, b) => a.nombre.localeCompare(b.nombre)));
     return producto;
@@ -203,7 +212,7 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
       if (alta.añadir) {
         const item: ItemCompra = {
           id: nuevoId(),
-          hogarId: HOGAR_LOCAL,
+          hogarId: hogarActual(),
           texto: producto.nombre,
           productoId,
           origen: alta.origen,
@@ -231,7 +240,7 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
     if (!limpio) return;
     const item: ItemCompra = {
       id: nuevoId(),
-      hogarId: HOGAR_LOCAL,
+      hogarId: hogarActual(),
       texto: limpio,
       productoId: null,
       origen: 'manual',
@@ -278,7 +287,7 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
         pendientes.add(clave);
         const item: ItemCompra = {
           id: nuevoId(),
-          hogarId: HOGAR_LOCAL,
+          hogarId: hogarActual(),
           texto: it.texto,
           productoId: it.productoId,
           origen: 'menu',
@@ -301,6 +310,7 @@ export function InventarioProvider({ children }: { children: React.ReactNode }) 
 
   const valor: Contexto = {
     cargando,
+    error,
     ajustes,
     productos,
     lotes,
