@@ -1,0 +1,11 @@
+{
+  "name": "Invenlux",
+  "short_name": "Invenlux",
+  "description": "Gestor de despensa con FEFO, lotes y caducidades.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E9EEEC",
+  "theme_color": "#0F1F1B",
+  "lang": "es"
+}

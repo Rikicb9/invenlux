@@ -13,7 +13,7 @@ pnpm install
 
 pnpm test          # tests del motor de dominio (54 casos)
 pnpm typecheck     # tipos de core + app
-pnpm movil         # levanta Expo (Expo Go, simulador iOS o emulador Android)
+pnpm dev           # levanta la web en http://localhost:5173
 ```
 
 La app abre con una despensa de ejemplo sembrada la primera vez (la misma del prototipo validado), para poder ver FEFO funcionando sin teclear veinte productos.
@@ -24,7 +24,8 @@ La app abre con una despensa de ejemplo sembrada la primera vez (la misma del pr
 
 ```
 packages/core     @invenlux/core — dominio puro: FEFO, stock, caducidad, reposición
-apps/movil        App Expo (React Native + expo-router + SQLite)
+apps/web          App web (React + Vite + TypeScript), instalable como PWA
+supabase          Esquema Postgres: tablas, RLS y trigger de alta
 ```
 
 ### `@invenlux/core`
@@ -55,7 +56,7 @@ Supabase (Postgres, región UE). El esquema vive en `supabase/schema.sql`: seis 
 
 Antes de arrancar hay que copiar `apps/movil/.env.example` como `.env` y rellenarlo con los valores de Settings → API del proyecto.
 
-### `apps/movil`
+### `apps/web`
 
 | Capa | Fichero |
 |---|---|
@@ -63,8 +64,9 @@ Antes de arrancar hay que copiar `apps/movil/.env.example` como `.env` y rellena
 | Sesión anónima y hogar | `src/datos/sesion.ts` |
 | Acceso a datos | `src/datos/repositorio.ts` |
 | Estado y acciones | `src/estado/InventarioProvider.tsx` |
-| Sistema visual (tokens del prototipo) | `src/ui/tema.ts` |
-| Pantallas | `app/(tabs)/` |
+| Sistema visual (portado del prototipo) | `src/estilos.css` |
+| Pantallas | `src/vistas/` |
+| Hojas modales | `src/hojas/` |
 
 Toda escritura pasa por el provider: primero SQLite, después memoria. La app no recalcula nada por su cuenta — el cálculo siempre es del core.
 
@@ -74,12 +76,12 @@ Toda escritura pasa por el provider: primero SQLite, después memoria. La app no
 
 | Historia | Dónde vive |
 |---|---|
-| HU-01 + HU-02 · Alta unificada de producto y lote | `hojasAlta.tsx` → `HojaEntrada` |
-| HU-03 · Ver inventario y detalle por lotes | `app/(tabs)/index.tsx`, `hojasProducto.tsx` |
-| HU-04 · Registro de consumo con mínima fricción | `HojaConsumo` (pasos rápidos + «se acabó») |
+| HU-01 + HU-02 · Alta unificada de producto y lote | `hojas/HojaEntrada.tsx` |
+| HU-03 · Ver inventario y detalle por lotes | `vistas/Inventario.tsx`, `hojas/HojaDetalle.tsx` |
+| HU-04 · Registro de consumo con mínima fricción | `hojas/HojaConsumo.tsx`, `hojas/HojaQuitar.tsx` |
 | HU-05 · Descuento FEFO | `core/fefo.ts` |
-| HU-06 · Alertas de caducidad | `core/caducidad.ts`, horizonte en Inventario |
-| HU-07 · Lista de la compra manual y automática | `core/reposicion.ts`, `app/(tabs)/compra.tsx` |
+| HU-06 · Alertas de caducidad | `core/caducidad.ts`, `componentes/Horizonte.tsx` |
+| HU-07 · Lista de la compra manual y automática | `core/reposicion.ts`, `vistas/Compra.tsx` |
 | HU-08 · Lista dinámica al terminarse un producto | `registrarConsumo` → `decidirAlta` |
 
 Fuera de alcance en este sprint, por decisión del MVP: escaneo de código de barras, OCR de tickets, importación por email, voz y multiusuario.
@@ -89,6 +91,14 @@ Fuera de alcance en este sprint, por decisión del MVP: escaneo de código de ba
 **El catálogo es la base del OCR.** Los 138 productos con vida útil típica y el mapa categoría→ubicación (`UBICACION_SUGERIDA`) son exactamente lo que necesitará el escaneo de tickets para decidir dónde va cada producto y qué caducidad estimarle.
 
 ---
+
+## Por qué web y no app nativa
+
+Decisión revisada en agosto de 2026. El stack original elegía React Native, pero probar una app nativa exige Expo Go, túneles o compilaciones — y eso bloqueó la validación durante semanas en un entorno con permisos restringidos.
+
+Los dos hitos del Sprint 2 no necesitan nativo: la **foto del ticket** se resuelve con `<input type="file" capture>` (y el OCR ocurre en el servidor de todos modos), y la **salida de inventario sin fricción** es un problema de diseño de interacción, no de plataforma. Instalada como PWA, la app se abre a pantalla completa desde la pantalla de inicio.
+
+Lo que sí se pierde: notificaciones push fiables en iOS y escaneo de código de barras en vivo de calidad. Ambas son funciones secundarias del Sprint 2. Si la validación las reclama, se hace la app nativa entonces — con el core ya probado y el producto ya validado.
 
 ## Pendiente antes del Sprint 2
 

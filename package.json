@@ -3,9 +3,10 @@
   "private": true,
   "packageManager": "pnpm@9.12.0",
   "scripts": {
+    "dev": "pnpm --filter @invenlux/web dev",
+    "build": "pnpm --filter @invenlux/web build",
     "test": "pnpm --filter @invenlux/core test",
-    "typecheck": "pnpm -r typecheck",
-    "movil": "pnpm --filter @invenlux/movil start"
+    "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
